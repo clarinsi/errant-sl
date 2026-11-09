@@ -1,39 +1,48 @@
 [project]
-name = "errant"
-version = "3.0.2"
-description = "The ERRor ANnotation Toolkit (ERRANT). Automatically extract and classify edits in parallel sentences."
+name = "sloerrant"
+version = "0.1.0"
+description = "SloERRANT: a Slovenian adaptation of the ERRor ANnotation Toolkit (ERRANT). Automatically extract and classify grammatical errors in parallel Slovenian sentences."
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE.md"]
 authors = [
+    { name = "Živa Stebljaj" },
     { name = "Christopher Bryant", email = "christopher.bryant@cl.cam.ac.uk" },
     { name = "Mariano Felice" },
 ]
-keywords = ["automatic annotation", "grammatical errors", "natural language processing"]
-requires-python = ">=3.7"
+keywords = ["automatic annotation", "grammatical errors", "natural language processing", "Slovenian", "Slovene"]
+requires-python = ">=3.9"
 dependencies = [
     "spacy>=3.2.0,<4",
     "rapidfuzz>=3.4.0",
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project.urls]
-Homepage = "https://github.com/chrisjbryant/errant"
+Homepage = "https://github.com/zivastebljaj/errant-sl"
+Upstream = "https://github.com/chrisjbryant/errant"
 
 [project.scripts]
 errant_compare = "errant.commands.compare_m2:main"
 errant_m2 = "errant.commands.m2_to_m2:main"
 errant_parallel = "errant.commands.parallel_to_m2:main"
 
+# The spaCy models are not on PyPI; standard PEP 508 direct references work
+# with both pip and uv (a git / local install, not a PyPI upload).
 [project.optional-dependencies]
 sl = [
-    "sl-core-news-sm",
+    "sl_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/sl_core_news_sm-3.8.0/sl_core_news_sm-3.8.0-py3-none-any.whl",
+]
+trf = [
+    "sl_core_news_trf @ https://github.com/explosion/spacy-models/releases/download/sl_core_news_trf-3.8.0/sl_core_news_trf-3.8.0-py3-none-any.whl",
 ]
 
 [tool.hatch.build.targets.wheel]
 include = ["errant"]
 
-[tool.uv.sources]
-sl-core-news-sm = { url = "https://github.com/explosion/spacy-models/releases/download/sl_core_news_sm-3.8.0/sl_core_news_sm-3.8.0-py3-none-any.whl" }
+# Direct references are otherwise rejected by hatchling
+[tool.hatch.metadata]
+allow-direct-references = true

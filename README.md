@@ -1,258 +1,308 @@
-# ERRANT v3.0.2
+# SloERRANT
 
-This repository contains the grammatical ERRor ANnotation Toolkit (ERRANT) described in:
+SloERRANT is a Slovenian adaptation of ERRANT (ERRor ANnotation Toolkit). It automatically extracts and classifies grammatical errors in Slovenian text.
 
-> Christopher Bryant, Mariano Felice, and Ted Briscoe. 2017. [**Automatic annotation and evaluation of error types for grammatical error correction**](https://www.aclweb.org/anthology/P17-1074/). In Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers). Vancouver, Canada.
+Given an original sentence and its correction, SloERRANT finds the edits that turn one into the other and gives each edit an error type. It also adds a second level of annotation: edits that belong to the same morphological change, such as a case change spreading through a noun phrase, are linked into one **group** with a label such as `M-CASE`. The output uses the standard M2 format, and an evaluation script is included.
 
-> Mariano Felice, Christopher Bryant, and Ted Briscoe. 2016. [**Automatic extraction of learner errors in ESL sentences using linguistically enhanced alignments**](https://www.aclweb.org/anthology/C16-1079/). In Proceedings of COLING 2016, the 26th International Conference on Computational Linguistics: Technical Papers. Osaka, Japan.
-
-If you make use of this code, please cite the above papers. More information about ERRANT can be found [here](https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-938.html). In particular, see Chapter 5 for definitions of error types.
-
-_Update - 09/12/23_: You can now try out ERRANT in our [online demo](https://nlptoolbox.cl.cam.ac.uk/errant/)!
-
-# Overview
-
-The main aim of ERRANT is to automatically annotate parallel English sentences with error type information. Specifically, given an original and corrected sentence pair, ERRANT will extract the edits that transform the former to the latter and classify them according to a rule-based error type framework. This can be used to standardise parallel datasets or facilitate detailed error type evaluation. Annotated output files are in M2 format and an evaluation script is provided.
-
-### Example:  
-**Original**: This are gramamtical sentence .  
-**Corrected**: This is a grammatical sentence .  
-**Output M2**:  
-S This are gramamtical sentence .  
-A 1 2|||R:VERB:SVA|||is|||REQUIRED|||-NONE-|||0  
-A 2 2|||M:DET|||a|||REQUIRED|||-NONE-|||0  
-A 2 3|||R:SPELL|||grammatical|||REQUIRED|||-NONE-|||0  
-A -1 -1|||noop|||-NONE-|||REQUIRED|||-NONE-|||1
-
-In M2 format, a line preceded by S denotes an original sentence while a line preceded by A indicates an edit annotation. Each edit line consists of the start and end token offset of the edit, the error type, and the tokenized correction string. The next two fields are included for historical reasons (see the CoNLL-2014 shared task) while the last field is the annotator id.
-
-A "noop" edit is a special kind of edit that explicitly indicates an annotator/system made no changes to the original sentence. If there is only one annotator, noop edits are optional, otherwise a noop edit should be included whenever at least 1 out of n annotators considered the original sentence to be correct. This is something to be aware of when combining individual M2 files, as missing noops can affect evaluation. 
-
-# Installation
-
-## Pip Install
-
-The easiest way to install ERRANT and its dependencies is using `pip`. We also recommend installing it in a clean virtual environment (e.g. with `venv`). The latest version of ERRANT only supports Python >= 3.7.
-```
-python3 -m venv errant_env
-source errant_env/bin/activate
-pip install -U pip setuptools wheel
-pip install errant
-python3 -m spacy download en_core_web_sm
-```
-This will create and activate a new python3 environment called `errant_env` in the current directory. `pip` will then update some setup tools and install ERRANT, [spaCy](https://spacy.io/), [rapidfuzz](https://pypi.org/project/rapidfuzz/) and spaCy's default English model in this environment. You can deactivate the environment at any time by running `deactivate`, but must remember to activate it again whenever you want to use ERRANT.  
-
-#### BEA-2019 Shared Task
-
-ERRANT v2.0.0 was designed to be fully compatible with the [BEA-2019 Shared Task](https://www.cl.cam.ac.uk/research/nl/bea2019st/). If you want to directly compare against the results in the shared task, you may want to install ERRANT v2.0.0 as newer versions may produce slightly different scores. You can also use [Codalab](https://codalab.lisn.upsaclay.fr/competitions/4057) to evaluate anonymously on the shared task datasets. ERRANT v2.0.0 is not compatible with Python >= 3.7.  
-```
-pip install errant==2.0.0
-```
-
-## Source Install
-
-If you prefer to install ERRANT from source, you can instead run the following commands:
-```
-git clone https://github.com/chrisjbryant/errant.git
-cd errant
-python3 -m venv errant_env
-source errant_env/bin/activate
-pip install -U pip setuptools wheel
-pip install -e .
-python3 -m spacy download en_core_web_sm
-```
-This will clone the github ERRANT source into the current directory, build and activate a python environment inside it, and then install ERRANT and all its dependencies. If you wish to modify ERRANT code, this is the recommended way to install it.
-
-# Usage
-
-## CLI
-
-Three main commands are provided with ERRANT: `errant_parallel`, `errant_m2` and `errant_compare`. You can run them from anywhere on the command line without having to invoke a specific python script.  
-
-1. `errant_parallel`  
-
-     This is the main annotation command that takes an original text file and at least one parallel corrected text file as input, and outputs an annotated M2 file. By default, it is assumed that the original and corrected text files are word tokenised with one sentence per line.  
-	 Example:
-	 ```
-	 errant_parallel -orig <orig_file> -cor <cor_file1> [<cor_file2> ...] -out <out_m2>
-	 ```
-
-     Instead of plain text, the input can also be pre-tagged [CoNLL-U](https://universaldependencies.org/format.html) produced by any tool (e.g. CLASSLA, Trankit, UDPipe). Use `-format conllu`; spacy is then not run and the CoNLL-U FORM, LEMMA, UPOS, XPOS, FEATS, HEAD and DEPREL are used as they are (`-model` is ignored, `-tok` is not allowed).
-	 ```
-	 errant_parallel -lang sl -format conllu -orig <orig.conllu> -cor <cor1.conllu> [<cor2.conllu> ...] -out <out_m2>
-	 ```
-     - Sentences are paired by their order in each file, so all files must contain the same number of sentences. Run the tagger on pre-segmented input (one line = one sentence) so it does not split or join sentences, and remove empty corrections first.
-     - ERRANT works on syntactic words: multi-word token ranges (e.g. `3-4 vanj`) and empty nodes are skipped, so the M2 `S` line and edit offsets refer to the split words (`v nj`).
-     - `SpaceAfter=No` in MISC is used to rebuild the surface text.
-     - For English, XPOS must contain Penn Treebank tags, since the English classifier relies on them.
-
-2. `errant_m2`  
-
-     This is a variant of `errant_parallel` that operates on an M2 file instead of parallel text files. This makes it easier to reprocess existing M2 files. You must also specify whether you want to use gold or auto edits; i.e. `-gold` will only classify the existing edits, while `-auto` will extract and classify automatic edits. In both settings, uncorrected edits and noops are preserved.  
-     Example:
-	 ```
-	 errant_m2 {-auto|-gold} m2_file -out <out_m2>
-	 ```
-
-3. `errant_compare`  
-
-     This is the evaluation command that compares a hypothesis M2 file against a reference M2 file. The default behaviour evaluates the hypothesis overall in terms of span-based correction. The `-cat {1,2,3}` flag can be used to evaluate error types at increasing levels of granularity (`-cat 4` groups Slovene types by level: O, M, V, S), while the `-ds` or `-dt` flag can be used to evaluate in terms of span-based or token-based detection (i.e. ignoring the correction). All scores are presented in terms of Precision, Recall and F-score (default: F0.5), and counts for True Positives (TP), False Positives (FP) and False Negatives (FN) are also shown.  
-     The `-group` flag scores the Slovene morphology groups (`G<n>=<op>:<label>` in the M2 comment field, written by the grouper) instead of single edits: a group counts only if all its member edits match, and it is scored under its group label without the operation (e.g. `M-CASE`); edits outside groups are scored as before. Both M2 files must be grouped. `-group` works with the correction modes (`-cs`, `-cse`) and `-cat`, not with `-ds` / `-dt`.  
-	 Examples:
-	 ```
-     errant_compare -hyp <hyp_m2> -ref <ref_m2> 
-     errant_compare -hyp <hyp_m2> -ref <ref_m2> -cat {1,2,3}
-     errant_compare -hyp <hyp_m2> -ref <ref_m2> -ds
-     errant_compare -hyp <hyp_m2> -ref <ref_m2> -ds -cat {1,2,3}
-     errant_compare -hyp <hyp_m2> -ref <ref_m2> -group -cat 3
-	 ```	
-
-All these scripts also have additional advanced command line options which can be displayed using the `-h` flag. 
-
-## API
-
-As of v2.0.0, ERRANT now also comes with an API.
-
-### Quick Start
+SloERRANT is based on the original [ERRANT](https://github.com/chrisjbryant/errant) toolkit developed by Bryant et al. English annotation (`-lang en`) still works as in upstream ERRANT v3.0.2.
 
 ```
+S Govorili smo do tega odnosa .
+A 2 3|||R:V-PREP|||o|||REQUIRED|||G0=R:M-GOV|||0
+A 3 4|||R:M-PRON|||tem|||REQUIRED|||G0=R:M-GOV|||0
+A 4 5|||R:M-NOUN|||odnosu|||REQUIRED|||G0=R:M-GOV|||0
+```
+
+## Differences from ERRANT
+
+**Changes to the error taxonomy**
+- Labels are **level-first** (O (orthography) / M (morphology) / V (vocabulary)/ S (syntax)).
+
+**Slovene merger** (`errant/sl/merger.py`)
+- The English merge rules are removed. Edits stay word-level, so the grouper can link them.
+- These spans become a single edit:
+  - a phrase ↔ a single pronoun (*te vere pa → katere*)
+  - a multi-word ↔ a single connector (*za kar → zato*)
+  - hyphen spacing (*e - pošto → e-pošto*)
+- A rewritten clause becomes one `S-REWRITE` edit. A clause counts as rewritten when ≥ 3 words, making up > 40 % of the clause, change.
+- A moved word or phrase becomes one `S-WO` edit.
+
+**Slovene classifier** (`errant/sl/classifier.py`)
+- Labels are `<operation>:<level>-<POS>`. As in ERRANT, the operation is `M` (missing), `U` (unnecessary) or `R` (replacement). The level is O, M, V or S. One-word replacements are decided from the tagger's lemmas and POS and the written forms, without a lexicon.
+- **O (orthography)**
+  - `O-SPELL`: a misspelling (*zeleli → želeli*, *srečau → srečal*, *z sestro → s sestro*)
+  - `O-PUNCT`: punctuation
+  - `O-CAP`: capitalisation
+  - `O-MERGE`, `O-SPLIT`: spacing (*za njo → zanjo*)
+- **M (morphology):** the same word in another form
+  - `M-<POS>`: only the ending differs (*svojem → svojemu*)
+  - bare `M`: the same lemma with a different POS
+- **V (vocabulary):** a different word
+  - `V-<POS>`: e.g. *iz → z*, *napravila → pripravila*, *ki → kateri*
+  - bare `V`: the two words have a different POS
+- **S (syntax)**
+  - `S-<POS>`: a missing or unnecessary word
+  - `S-WO`: word order
+  - `S-REWRITE`: a rewritten phrase or clause
+  - `S-REF`: a phrase ↔ a pronoun (*te vere pa → katere*)
+  - `S-CONJ`: punctuation ↔ a conjunction
+- `UNK`: detected but not corrected. `OTHER`: not covered by the rules.
+
+**Optional grouper** (`errant/sl/grouper.py`)
+- A new stage after the classifier. It links the edits of one morphological change into a group. Links come from agreement, from an auxiliary to its verb, and from a preposition to the case it governs.
+- Each group is labelled by the feature that changed (`M-CASE`, `M-NUM`, `M-MOOD`, `M-GOV`, …). The label goes in the M2 comment field as `G<n>=<operation>:<label>`.
+- Word labels are never changed. Skip the grouper with `annotate(..., group=False)`.
+
+**Linguistic resources and NLP models**
+- spaCy's Slovenian pipelines `sl_core_news_sm` (default) and `sl_core_news_trf` (recommended). Any other spaCy model can be selected with `-model`.
+- **Pre-tagged CoNLL-U input** (`-format conllu`), so you can use CLASSLA, Trankit, UDPipe or any other tagger instead of spaCy.
+- A table of the case/number readings of all personal and reflexive pronoun forms (long, short and bound: *njega, ga, zanj*), written from the Slovene pronoun paradigm. The grouper uses it for `M-PFORM`.
+
+- **Scoring** (`errant_compare`) adds:
+  - `-cat 4`: scores by level (O, M, V, S)
+  - `-group`: scores morphology groups as single units
+  
+  Without these flags, the output is identical to upstream.
+
+## Installation
+
+You need Python ≥ 3.9. Install SloERRANT and the Slovenian spaCy model with a single command, preferably in a fresh virtual environment:
+
+```
+python3 -m venv sloerrant_env
+source sloerrant_env/bin/activate
+pip install "sloerrant[sl] @ git+https://github.com/zivastebljaj/errant-sl.git"
+```
+
+The `[sl]` extra installs `sl_core_news_sm` automatically, so you don't need a separate `spacy download` step. With [uv](https://docs.astral.sh/uv/), the same command runs faster: `uv pip install "sloerrant[sl] @ git+…"`.
+
+**Recommended: the transformer model.** Lemmas decide between morphology (M) and vocabulary (V), and the small model's lemmas are much worse (see the examples below). To install the transformer model as well:
+
+```
+pip install "sloerrant[sl,trf] @ git+https://github.com/zivastebljaj/errant-sl.git"
+```
+
+This pulls in PyTorch, which is a large download. If you already tag your data with another parser, skip the model and use CoNLL-U input instead.
+
+**From source** (for development):
+
+```
+git clone https://github.com/zivastebljaj/errant-sl.git
+cd errant-sl
+uv sync --extra sl          # or: pip install -e ".[sl]"
+```
+
+> **Note:** SloERRANT keeps the import name `errant`. Do not install it in the same environment as upstream `errant` from PyPI: the two would overwrite each other.
+
+## Usage
+
+### Python API
+
+```python
 import errant
 
-annotator = errant.load('en')
-orig = annotator.parse('This are gramamtical sentence .')
-cor = annotator.parse('This is a grammatical sentence .')
-edits = annotator.annotate(orig, cor)
-for e in edits:
-    print(e.o_start, e.o_end, e.o_str, e.c_start, e.c_end, e.c_str, e.type)
+annotator = errant.load("sl")                              # sl_core_news_sm
+# annotator = errant.load("sl", model="sl_core_news_trf")  # recommended
+
+orig = annotator.parse("Pomagal sem svojem dobrem prijatelju.", tokenise=True)
+cor  = annotator.parse("Pomagal sem svojemu dobremu prijatelju.", tokenise=True)
+for e in annotator.annotate(orig, cor):
+    print(e.o_str, "->", e.c_str, e.type, e.group_label)
 ```
 
-### Loading
-
-`errant`.**load**(lang, nlp=None)  
-Create an ERRANT Annotator object. The `lang` parameter currently only accepts `'en'` for English, but we hope to extend it for other languages in the future. The optional `nlp` parameter can be used if you have already preloaded spacy and do not want ERRANT to load it again.
+Output with `sl_core_news_trf`:
 
 ```
-import errant
-import spacy
-
-nlp = spacy.load('en_core_web_sm') # Or en_core_web_X for other spacy models
-annotator = errant.load('en', nlp)
+svojem -> svojemu R:M-PRON M-CASE
+dobrem -> dobremu R:M-ADJ M-CASE
 ```
 
-### Annotator Objects
+Each edit has the standard ERRANT attributes (`o_start`, `o_end`, `o_str`, `c_str`, `type`, …) plus `group`, `group_label` and `group_op`. Use `annotate(..., group=False)` to skip the grouper. `import_edit` classifies an edit but doesn't group it; call `annotator.grouper.group(orig, cor, edits)` for that.
 
-An Annotator object is the main interface for ERRANT.
+**Pre-tagged CoNLL-U.** Only the vocabulary of the spaCy pipeline is used here, so a blank one is enough:
 
-#### Methods
+```python
+import errant, spacy
 
-`annotator`.**parse**(string, tokenise=False)  
-Lemmatise, POS tag, and parse a text string with spacy. Set `tokenise` to True to also word tokenise with spacy. Returns a spacy Doc object.
-
-`annotator`.**read_conllu**(path)  
-Read a pre-tagged CoNLL-U file and yield one spacy Doc per sentence, carrying the CoNLL-U annotation (spacy is not run). Only the vocab of the annotator's `nlp` is used, so a blank pipeline is enough. `annotator`.**parse_conllu**(rows) does the same for a single sentence read with `errant.conllu.read_conllu`.
-
-```
-import errant
-import spacy
-
-annotator = errant.load('sl', nlp=spacy.blank('sl'))
-for orig, cor in zip(annotator.read_conllu('orig.conllu'), annotator.read_conllu('cor.conllu')):
+annotator = errant.load("sl", nlp=spacy.blank("sl"))
+for orig, cor in zip(annotator.read_conllu("orig.conllu"), annotator.read_conllu("cor.conllu")):
     edits = annotator.annotate(orig, cor)
 ```
 
-`annotator`.**align**(orig, cor, lev=False)  
-Align spacy-parsed original and corrected text. The default uses a linguistically-enhanced Damerau-Levenshtein alignment, but the `lev` flag can be used for a standard Levenshtein alignment. Returns an Alignment object.
-
-`annotator`.**merge**(alignment, merging='rules')  
-Extract edits from the optimum alignment in an Alignment object. Four different merging strategies are available:
-1. rules: Use a rule-based merging strategy (default)
-2. all-split: Merge nothing: MSSDI -> M, S, S, D, I
-3. all-merge: Merge adjacent non-matches: MSSDI -> M, SSDI
-4. all-equal: Merge adjacent same-type non-matches: MSSDI -> M, SS, D, I
-
-Returns a list of Edit objects.
-
-`annotator`.**classify**(edit)  
-Classify an edit. Sets the `edit.type` attribute in an Edit object and returns the same Edit object. 
-
-`annotator`.**annotate**(orig, cor, lev=False, merging='rules')  
-Run the full annotation pipeline to align two sequences and extract and classify the edits. Equivalent to running `annotator.align`, `annotator.merge` and `annotator.classify` in sequence. Returns a list of Edit objects.
+### Command line
 
 ```
-import errant
+# Parallel text → M2 (one sentence per line)
+errant_parallel -lang sl -tok -orig orig.txt -cor cor.txt [cor2.txt ...] -out out.m2
+errant_parallel -lang sl -tok -model sl_core_news_trf -orig orig.txt -cor cor.txt -out out.m2
 
-annotator = errant.load('en')
-orig = annotator.parse('This are gramamtical sentence .')
-cor = annotator.parse('This is a grammatical sentence .')
-alignment = annotator.align(orig, cor)
-edits = annotator.merge(alignment)
-for e in edits:
-    e = annotator.classify(e)
+# Pre-tagged CoNLL-U → M2 (spaCy is not run)
+errant_parallel -lang sl -format conllu -orig orig.conllu -cor cor.conllu -out out.m2
+
+# Re-annotate an existing M2 file: -gold re-classifies its edits, -auto extracts new ones
+errant_m2 -lang sl -gold in.m2 -out out.m2
+
+# Evaluate a hypothesis against a reference
+errant_compare -hyp hyp.m2 -ref ref.m2              # span-based correction, F0.5
+errant_compare -hyp hyp.m2 -ref ref.m2 -cat 4       # per level: O, M, V, S
+errant_compare -hyp hyp.m2 -ref ref.m2 -cat 3       # per label, e.g. R:M-NOUN
+errant_compare -hyp hyp.m2 -ref ref.m2 -group -cat 3  # groups as units, e.g. M-CASE
 ```
 
-`annotator`.**import_edit**(orig, cor, edit, min=True, old_cat=False)  
-Load an Edit object from a list. `orig` and `cor` must be spacy-parsed Doc objects and the edit must be of the form: `[o_start, o_end, c_start, c_end(, type)]`. The values must be integers that correspond to the token start and end offsets in the original and corrected Doc objects. The `type` value is an optional string that denotes the error type of the edit (if known). Set `min` to True to minimise the edit (e.g. [a b -> a c] = [b -> c]) and `old_cat` to True to preserve the old error type category (i.e. turn off the classifier).
+- **Use `-tok` unless your text is already tokenised.** Without it, input is split on whitespace only, so end of sentence punctuation stays glued to the previous token.
+- **CoNLL-U:** sentences are paired by their order in each file. Multi-word tokens are split into syntactic words (*vanj* → *v nj*), and M2 offsets refer to those words.
+- **`-group`:** a group is a true positive only if the other file has a group with exactly the same member edits. Both files must have been annotated by SloERRANT.
+- Annotate the hypothesis and the reference with the **same model or tagger**. Mixing parsers lowers scores slightly.
+- All commands accept `-h` for further options.
+
+### Example
+
+`orig.txt`:
+```
+To je zelo zanimva knjiga.
+Pomagal sem svojem dobrem prijatelju.
+Govorili smo do tega odnosa.
+Kot da dela.
+Sinoči sva šla z sestro v kino.
+Gre dvakrat vsak teden na trening.
+```
+`cor.txt`:
+```
+To je zelo zanimiva knjiga.
+Pomagal sem svojemu dobremu prijatelju.
+Govorili smo o tem odnosu.
+Kot da bi delala.
+Sinoči sva šla s sestro v kino.
+Gre vsak teden dvakrat na trening.
+```
+
+`errant_parallel -lang sl -tok -model sl_core_news_trf -orig orig.txt -cor cor.txt -out out.m2` gives:
 
 ```
-import errant
+S To je zelo zanimva knjiga .
+A 3 4|||R:O-SPELL|||zanimiva|||REQUIRED|||-NONE-|||0
 
-annotator = errant.load('en')
-orig = annotator.parse('This are gramamtical sentence .')
-cor = annotator.parse('This is a grammatical sentence .')
-edit = [1, 2, 1, 2, 'SVA'] # are -> is
-edit = annotator.import_edit(orig, cor, edit)
-print(edit.to_m2())
+S Pomagal sem svojem dobrem prijatelju .
+A 2 3|||R:M-PRON|||svojemu|||REQUIRED|||G0=R:M-CASE|||0
+A 3 4|||R:M-ADJ|||dobremu|||REQUIRED|||G0=R:M-CASE|||0
+
+S Govorili smo do tega odnosa .
+A 2 3|||R:V-PREP|||o|||REQUIRED|||G0=R:M-GOV|||0
+A 3 4|||R:M-PRON|||tem|||REQUIRED|||G0=R:M-GOV|||0
+A 4 5|||R:M-NOUN|||odnosu|||REQUIRED|||G0=R:M-GOV|||0
+
+S Kot da dela .
+A 2 2|||M:S-AUX|||bi|||REQUIRED|||G0=R:M-MOOD|||0
+A 2 3|||R:M-VERB|||delala|||REQUIRED|||G0=R:M-MOOD|||0
+
+S Sinoči sva šla z sestro v kino .
+A 3 4|||R:O-SPELL|||s|||REQUIRED|||-NONE-|||0
+
+S Gre dvakrat vsak teden na trening .
+A 1 4|||R:S-WO|||vsak teden dvakrat|||REQUIRED|||-NONE-|||0
 ```
 
-### Alignment Objects
+These are the examples of:
+1. A misspelling.
+2. A case error spread over two agreeing words, which form one `M-CASE` group.
+3. A wrong preposition together with the case it governs, labelled `M-GOV`.
+4. A missing conditional *bi* and the verb form it requires, labelled `M-MOOD`.
+5. The *s/z* preposition confusion.
+6. A word order change.
 
-An Alignment object is created from two spacy-parsed text sequences.
+With the default `sl_core_news_sm`, sentences 2 and 4 come out worse. *dobremu* and *delala* are labelled `R:O-SPELL`, so neither joins its group, because the small model gives them the wrong lemmas.
 
-#### Attributes
+## Error Categories
 
-`alignment`.**orig**  
-`alignment`.**cor**  
-The spacy-parsed original and corrected text sequences.
+Each edit has a **word label** `<operation>:<label>`. As in ERRANT, the operation is `M` (missing), `U` (unnecessary) or `R` (replacement). Unlike ERRANT, the label starts with a **level**:
 
-`alignment`.**cost_matrix**   
-`alignment`.**op_matrix**  
-The cost matrix and operation matrix produced by the alignment.
+| Level | Labels | Meaning |
+|---|---|---|
+| **O**: orthography | `O-SPELL`, `O-PUNCT`, `O-CAP`, `O-MERGE` (*za njo → zanjo*), `O-SPLIT` (*črnobelo → črno - belo*) | spelling, punctuation, capitalisation, spacing |
+| **M**: morphology | `M-<POS>`, `M` | same word (same or close lemma), different form; bare `M` = same lemma, different POS |
+| **V**: vocabulary | `V-<POS>`, `V` | a different word; bare `V` = the two sides have a different POS |
+| **S**: syntax | `S-<POS>`, `S-WO`, `S-REWRITE`, `S-REF`, `S-CONJ` | a missing or unnecessary word (`S-<POS>`), word order, a rewritten clause or phrase, phrase ↔ pronoun (*te vere pa → katere*), punctuation ↔ conjunction |
+| | `OTHER`, `UNK` | unclassified; detected but not corrected |
 
-`alignment`.**align_seq**  
-The first cheapest alignment between the two sequences.
+`<POS>` is the Universal Dependencies UPOS tag, with these renames: `ADP` → `PREP`, `PROPN` → `NOUN`, `DET` and the relative *ki* → `PRON`, `CCONJ` / `SCONJ` → `CONJ`. A token without letters or digits is `PUNCT`. A missing or unnecessary auxiliary is `S-AUX`; its morphological effect is recorded in the group.
 
-### Edit Objects
+**Group labels** (morphology only) appear in the M2 comment field as `G<n>=<operation>:<label>`:
 
-An Edit object represents a transformation between two text sequences.
+| Label | Change |
+|---|---|
+| `M-CASE`, `M-NUM`, `M-GEND`, `M-PRS` | case, number, gender, person |
+| `M-GOV` | case change together with a preposition change (*do tega odnosa → o tem odnosu*) |
+| `M-DEF`, `M-DEG` | definiteness, degree of comparison (incl. *bolj* / *najbolj*) |
+| `M-TENSE`, `M-ASP`, `M-MOOD` | tense, aspect, mood (incl. conditional *bi*) |
+| `M-VFORM`, `M-SFORM` | non-finite ↔ finite verb; infinitive ↔ supine (*skrbet → skrbeti*) |
+| `M-PFORM` | long / short / bound pronoun form (*njemu → mu*, *za njega → zanj*) |
+| `M-REFL` | reflexive *se* ↔ *si* |
+| `M-MORPH` | other morphological change |
 
-#### Attributes
+When several features change, the label follows this priority: `SFORM > MOOD > VFORM > TENSE > ASP > REFL > DEG > DEF > GOV > PFORM > CASE > PRS > NUM > GEND > MORPH`. Every morphology edit belongs to a group, even if it is a group of one. Prepositions, *se/si*, *bolj/najbolj* and auxiliaries can also join a group.
 
-`edit`.**o_start**  
-`edit`.**o_end**  
-`edit`.**o_toks**  
-`edit`.**o_str**  
-The start and end offsets, the spacy tokens, and the string for the edit in the *original* text.
+**Differences from English ERRANT**
+- English ERRANT types are POS-first (`VERB:SVA`, `NOUN:NUM`, `VERB:TENSE`). SloERRANT puts the level first and keeps word labels coarse. The *kind* of morphological error, such as agreement, case or tense, moves to the group level, where it can cover several words.
+- There are no `SVA`, `NOUN:INFL`, `VERB:FORM`, `ORTH` or `CONTR` types. Their roles are taken by group labels, `O-CAP` / `O-MERGE` / `O-SPLIT` and `O-SPELL`.
+- New types: `S-REWRITE`, `S-REF`, `S-CONJ`, `S-WO` for moves over any distance, and bare `M` / `V`.
 
-`edit`.**c_start**  
-`edit`.**c_end**  
-`edit`.**c_toks**  
-`edit`.**c_str**  
-The start and end offsets, the spacy tokens, and the string for the edit in the *corrected* text.
+**Known limitations**
+- Group types and the choice between M and V depend on how the tagger reads *incorrect* word forms. Use a good tagger.
+- A word moved together with another change inside the moved span is not recognised as a move.
+- Corrections that only change spacing, such as `20%` → `20 %`, are invisible at the token level.
+- `errant_m2` re-parses with spaCy and has no CoNLL-U input.
 
-`edit`.**type**  
-The error type string.
+## Citation
 
-#### Methods
+There is no SloERRANT publication yet. Please cite the software for now:
 
-`edit`.**to_m2**(id=0)  
-Format the edit for an output M2 file. `id` is the annotator id.	
+```bibtex
+@software{stebljaj2026sloerrant,
+  author = {Stebljaj, Živa},
+  title  = {{SloERRANT}: A Slovenian Adaptation of the ERRor ANnotation Toolkit},
+  year   = {2026},
+  url    = {https://github.com/zivastebljaj/errant-sl}
+}
+```
+<!-- TODO: replace with the SloERRANT paper once published -->
 
-## Development for Other Languages
+Please also cite the original ERRANT papers:
 
-If you want to develop ERRANT for other languages, you should mimic the `errant/en` directory structure. For example, ERRANT for French should import a merger from `errant.fr.merger` and a classifier from `errant.fr.classifier` that respectively have equivalent `get_rule_edits` and `classify` methods. You will also need to add `'fr'` to the list of supported languages in `errant/__init__.py`.
+```bibtex
+@inproceedings{bryant-etal-2017-automatic,
+  title     = {Automatic Annotation and Evaluation of Error Types for Grammatical Error Correction},
+  author    = {Bryant, Christopher and Felice, Mariano and Briscoe, Ted},
+  booktitle = {Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
+  year      = {2017},
+  address   = {Vancouver, Canada},
+  publisher = {Association for Computational Linguistics},
+  url       = {https://aclanthology.org/P17-1074/},
+  pages     = {793--805}
+}
 
-# Contact
+@inproceedings{felice-etal-2016-automatic,
+  title     = {Automatic Extraction of Learner Errors in {ESL} Sentences Using Linguistically Enhanced Alignments},
+  author    = {Felice, Mariano and Bryant, Christopher and Briscoe, Ted},
+  booktitle = {Proceedings of {COLING} 2016, the 26th International Conference on Computational Linguistics: Technical Papers},
+  year      = {2016},
+  address   = {Osaka, Japan},
+  url       = {https://aclanthology.org/C16-1079/},
+  pages     = {825--835}
+}
+```
 
-If you have any questions, suggestions or bug reports, you can contact the authors at:  
-christopher d0t bryant at cl.cam.ac.uk  
-mariano d0t felice at cl.cam.ac.uk  
+## Acknowledgements
+
+SloERRANT is based on ERRANT: https://github.com/chrisjbryant/errant
+
+The original ERRANT software was developed by Christopher Bryant and collaborators. For the full API reference (Alignment and Edit objects, merging strategies, etc.), see the [upstream README](https://github.com/chrisjbryant/errant#readme). The API is unchanged.
+
+The Slovenian pipelines are [spaCy](https://spacy.io/models/sl)'s `sl_core_news` models by Explosion.
+
+## License
+
+MIT License. See [LICENSE.md](LICENSE.md). The original copyright of Christopher Bryant and Mariano Felice is retained.
+
+SloERRANT doesn't ship any third-party data. The spaCy models are installed as dependencies under their own licenses.
+
+Bug reports and suggestions: [GitHub issues](https://github.com/zivastebljaj/errant-sl/issues).

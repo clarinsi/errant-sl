@@ -1,0 +1,153 @@
+# Case/Number readings of the Slovene personal and reflexive pronoun forms
+# (long, short and bound), written from the pronoun paradigm in
+# J. Toporišič, Slovenska slovnica. Bound forms are the accusative after
+# za, na, v, pred, med, nad, pod, skozi, čez, ob, po (zame, vanj, predenj).
+# Used by the grouper (pronoun form, M-PFORM): the readings a form can
+# have instead of the single reading the tagger picks in context.
+# Reflexive forms have no number (-). The clitic se is not listed (its
+# case is ambiguous with the reflexive particle); forms not listed take
+# the tagger's reading.
+# form<TAB>readings (Case/Number, space-separated)
+ga	Gen/Sing Acc/Sing
+jaz	Nom/Sing
+je	Gen/Sing
+ji	Dat/Sing
+jih	Gen/Dual Acc/Dual Gen/Plur Acc/Plur
+jim	Dat/Plur
+jima	Dat/Dual
+jo	Acc/Sing
+ju	Gen/Dual Acc/Dual
+mano	Ins/Sing
+me	Gen/Sing Acc/Sing Nom/Plur
+medenj	Acc/Sing
+medme	Acc/Sing
+mednje	Acc/Plur
+mednjo	Acc/Sing
+mednju	Acc/Dual
+medse	Acc/-
+medte	Acc/Sing
+medve	Nom/Dual
+mene	Gen/Sing Acc/Sing
+meni	Dat/Sing Loc/Sing
+menoj	Ins/Sing
+mi	Dat/Sing Nom/Plur
+midva	Nom/Dual
+midve	Nom/Dual
+mu	Dat/Sing
+nadenj	Acc/Sing
+nadme	Acc/Sing
+nadnje	Acc/Plur
+nadnjo	Acc/Sing
+nadnju	Acc/Dual
+nadse	Acc/-
+nadte	Acc/Sing
+naju	Gen/Dual Acc/Dual Loc/Dual
+nam	Dat/Plur
+nama	Dat/Dual Loc/Dual Ins/Dual
+name	Acc/Sing
+nami	Ins/Plur
+nanj	Acc/Sing
+nanje	Acc/Plur
+nanjo	Acc/Sing
+nanju	Acc/Dual
+nas	Gen/Plur Acc/Plur Loc/Plur
+nase	Acc/-
+nate	Acc/Sing
+nje	Gen/Sing Acc/Plur
+njega	Gen/Sing Acc/Sing
+njej	Dat/Sing Loc/Sing
+njem	Loc/Sing
+njemu	Dat/Sing
+nji	Dat/Sing Loc/Sing
+njih	Gen/Dual Gen/Plur Acc/Plur Loc/Plur
+njiju	Gen/Dual Acc/Dual Loc/Dual
+njim	Ins/Sing Dat/Plur
+njima	Dat/Dual Loc/Dual Ins/Dual
+njimi	Ins/Plur
+njo	Acc/Sing Ins/Sing
+nju	Gen/Dual Acc/Dual Loc/Dual
+obenj	Acc/Sing
+obme	Acc/Sing
+obnje	Acc/Plur
+obnjo	Acc/Sing
+obnju	Acc/Dual
+obse	Acc/-
+obte	Acc/Sing
+on	Nom/Sing
+ona	Nom/Sing Nom/Plur
+onadva	Nom/Dual
+one	Nom/Plur
+onedve	Nom/Dual
+oni	Nom/Plur
+onidve	Nom/Dual
+ono	Nom/Sing Acc/Sing
+podenj	Acc/Sing
+podme	Acc/Sing
+podnje	Acc/Plur
+podnjo	Acc/Sing
+podnju	Acc/Dual
+podse	Acc/-
+podte	Acc/Sing
+pome	Acc/Sing
+ponj	Acc/Sing
+ponje	Acc/Plur
+ponjo	Acc/Sing
+ponju	Acc/Dual
+pose	Acc/-
+pote	Acc/Sing
+predenj	Acc/Sing
+predme	Acc/Sing
+prednje	Acc/Plur
+prednjo	Acc/Sing
+prednju	Acc/Dual
+predse	Acc/-
+predte	Acc/Sing
+sabo	Ins/-
+sebe	Gen/- Acc/-
+sebi	Dat/- Loc/-
+seboj	Ins/-
+si	Dat/-
+skozenj	Acc/Sing
+skozme	Acc/Sing
+skoznje	Acc/Plur
+skoznjo	Acc/Sing
+skoznju	Acc/Dual
+skozse	Acc/-
+skozte	Acc/Sing
+tabo	Ins/Sing
+te	Gen/Sing Acc/Sing
+tebe	Gen/Sing Acc/Sing
+tebi	Dat/Sing Loc/Sing
+teboj	Ins/Sing
+ti	Nom/Sing Dat/Sing
+vaju	Gen/Dual Acc/Dual Loc/Dual
+vam	Dat/Plur
+vama	Dat/Dual Loc/Dual Ins/Dual
+vame	Acc/Sing
+vami	Ins/Plur
+vanj	Acc/Sing
+vanje	Acc/Plur
+vanjo	Acc/Sing
+vanju	Acc/Dual
+vas	Gen/Plur Acc/Plur Loc/Plur
+vase	Acc/-
+vate	Acc/Sing
+ve	Nom/Plur
+vedve	Nom/Dual
+vi	Nom/Plur
+vidva	Nom/Dual
+vidve	Nom/Dual
+zame	Acc/Sing
+zanj	Acc/Sing
+zanje	Acc/Plur
+zanjo	Acc/Sing
+zanju	Acc/Dual
+zase	Acc/-
+zate	Acc/Sing
+čezenj	Acc/Sing
+čezme	Acc/Sing
+čeznje	Acc/Plur
+čeznjo	Acc/Sing
+čeznju	Acc/Dual
+čezse	Acc/-
+čezte	Acc/Sing

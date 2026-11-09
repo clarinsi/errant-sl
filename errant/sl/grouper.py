@@ -51,9 +51,10 @@ def load_readings(path):
             readings[form] = set(rs.split())
     return readings
 
-# Case/Number readings of the long, short and bound personal pronoun forms
-# from Sloleks (reflexive: no number); forms not listed take the tagger's
-PRON_READINGS = load_readings(Path(__file__).resolve().parent/"resources"/"pron_readings.tsv")
+# Case/Number readings of the long, short and bound personal pronoun forms,
+# from the Slovene pronoun paradigm (reflexive: no number); forms not listed
+# take the tagger's
+PRON_READINGS = load_readings(Path(__file__).resolve().parent/"resources"/"pronouns.tsv")
 # Heads that can link their agreeing dependents when they don't change
 # themselves (syncretism): [svojem strokovnem štabu -> svojemu strokovnemu štabu]
 NOMINAL = {"NOUN", "PROPN", "ADJ", "PRON", "DET", "NUM"}
