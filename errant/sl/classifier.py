@@ -1,4 +1,5 @@
 from pathlib import Path
+from re import sub
 from rapidfuzz.distance import Levenshtein
 import spacy.symbols as POS
 from errant.sl.merger import is_conn, is_ref
@@ -22,7 +23,6 @@ def in_sloleks(word):
     return False
 
 # Classifier resources
-nlp = None
 # Open class coarse Spacy POS tags
 open_pos1 = {POS.ADJ, POS.ADV, POS.NOUN, POS.VERB}
 # Rare POS tags that make uninformative error categories
@@ -34,9 +34,6 @@ dep_map = {
     "det": "PRON",
     "case": "PREP",
     "punct": "PUNCT"}
-# Dependency relations that mark an auxiliary (covers both "aux:pass" (UD v2)
-# and the older "auxpass" subtype spelling)
-aux_deps = {"aux", "auxpass", "aux:pass"}
 # Single-letter prepositions confusable by voicing/pronunciation
 prep_confusions = {frozenset({"s", "z"}), frozenset({"k", "h"}), frozenset({"u", "v"})}
 # Lemma similarity above which two lemmas count as "close enough" for M-POS,
@@ -47,10 +44,11 @@ LEMMA_SIM_THRESHOLD = 0.8
 # held to the same absolute distance as long ones
 TEXT_EDIT_SCALE = 3
 
-# Input: A resolved POS string
-# Output: The one-sided category label ("O-" for punctuation, "S-" otherwise)
-def label_pos(pos):
-    return "O-PUNCT" if pos == "PUNCT" else "S-" + pos
+# Input 1: A resolved POS string
+# Input 2: The level prefix: S (one-sided), M or V
+# Output: The category label: O-PUNCT for punctuation, else <level>-<POS>
+def label_pos(pos, level="S"):
+    return "O-PUNCT" if pos == "PUNCT" else level + "-" + pos
 
 # Input 1: A string
 # Input 2: A string
@@ -91,19 +89,8 @@ def label_vocab(o_pos, c_pos):
 # Input: An Edit object
 # Output: The same Edit object with an updated error type
 def classify(edit):
-    # Rewritten clause, preset by the merger; only the operation is added,
-    # unless the span is only a whitespace / case change or a reordering
-    if edit.type == "S-REWRITE":
-        if edit.o_toks and edit.c_toks and only_orth_change(edit.o_toks, edit.c_toks):
-            edit.type = "R:"+get_orth_subtype(edit.o_toks, edit.c_toks)
-        elif edit.o_toks and edit.c_toks and exact_reordering(edit.o_toks, edit.c_toks):
-            edit.type = "R:S-WO"
-        elif edit.o_toks and edit.c_toks and get_span_type(edit.o_toks, edit.c_toks):
-            edit.type = "R:"+get_span_type(edit.o_toks, edit.c_toks)
-        else:
-            edit.type = get_op(edit)+"S-REWRITE"
     # Nothing to nothing is a detected but not corrected edit
-    elif not edit.o_toks and not edit.c_toks:
+    if not edit.o_toks and not edit.c_toks:
         edit.type = "UNK"
     # Missing
     elif not edit.o_toks and edit.c_toks:
@@ -143,13 +130,6 @@ def classify(edit):
             edit.type = op+cat
     return edit
 
-# Input: An Edit object
-# Output: The operation prefix from the span: "M:", "U:" or "R:"
-def get_op(edit):
-    if not edit.o_toks: return "M:"
-    if not edit.c_toks: return "U:"
-    return "R:"
-
 # Input: A Spacy token
 # Output: The label POS of the token. A token without letters or digits is
 # punctuation. UD POS renamed for readability (as upstream ERRANT), plus
@@ -185,9 +165,6 @@ def get_one_sided_type(toks):
     if set(pos_list) != {"PUNCT"}:
         dep_list = [d for p, d in zip(pos_list, dep_list) if p != "PUNCT"]
         pos_list = [p for p in pos_list if p != "PUNCT"]
-    # Auxiliary verbs
-    if set(dep_list).issubset(aux_deps):
-        return "M-AUX"
     # POS-based tags. Ignores rare, uninformative categories; a missing /
     # unnecessary numeral is informative: [eden razlog -> razlog]
     if len(set(pos_list)) == 1 and pos_list[0] not in rare_pos - {"NUM"}:
@@ -215,6 +192,10 @@ def get_two_sided_type(o_toks, c_toks):
     # Orthography; i.e. whitespace and/or case errors.
     if only_orth_change(o_toks, c_toks):
         return get_orth_subtype(o_toks, c_toks)
+    # Spacing around hyphens / dashes 
+    if only_hyphen_change(o_toks, c_toks):
+        if len(o_toks) == len(c_toks): return "O-PUNCT"
+        return "O-MERGE" if len(o_toks) > len(c_toks) else "O-SPLIT"
     # Word Order; only matches exact reordering.
     if exact_reordering(o_toks, c_toks):
         return "S-WO"
@@ -238,7 +219,7 @@ def get_two_sided_type(o_toks, c_toks):
         if o_in and c_in:
             # 1. MORPHOLOGY: both confirmed real words, close lemma, same POS
             if close_lemma(o_toks[0], c_toks[0]) and o_pos[0] == c_pos[0]:
-                return "O-PUNCT" if o_pos[0] == "PUNCT" else "M-" + o_pos[0]
+                return label_pos(o_pos[0], "M")
             # Same lemma but the POS differs: morphology without a POS
             if same_lemma(o_toks[0], c_toks[0]) and "PUNCT" not in {o_pos[0], c_pos[0]}:
                 return "M"
@@ -265,11 +246,10 @@ def get_two_sided_type(o_toks, c_toks):
             return "M-AUX"
         # POS-based tags. Some of these are context sensitive mispellings.
         if o_pos == c_pos and o_pos[0] not in rare_pos:
-            return "O-PUNCT" if o_pos[0] == "PUNCT" else "V-" + o_pos[0]
+            return label_pos(o_pos[0], "V")
         # Some dep labels map to POS-based tags.
         if o_dep == c_dep and o_dep[0] in dep_map.keys():
-            mapped = dep_map[o_dep[0]]
-            return "O-PUNCT" if mapped == "PUNCT" else "V-" + mapped
+            return label_pos(dep_map[o_dep[0]], "V")
 
         # 5. STRING SIMILARITY
         # Generic Levenshtein-based fallback; no language-specific tuning.
@@ -280,22 +260,21 @@ def get_two_sided_type(o_toks, c_toks):
         # Tricky cases
         return "OTHER"
 
-    # Multi-token replacements: the merger only builds these for rewrites,
-    # phrase <-> pronoun, connectors and spacing, all handled above
-    return "OTHER"
+    # Multi-token replacements that are not orthography, word order, REF or
+    # connector spans (all handled above): rewritten phrases / clauses
+    return "S-REWRITE"
 
 # Input 1: Spacy orig tokens
 # Input 2: Spacy cor tokens
 # Output: The label of a non-decomposable unit the merger keeps as one edit,
-# or None. Same tests as the merger, so both agree on these spans.
+# or None. 
 def get_span_type(o_toks, c_toks):
     # ki <-> kateri: a choice between two equivalent relative pronouns, i.e.
     # vocabulary: [kateri -> ki], [kateremu -> ki mu], [ki -> s katerim]
     if is_ki_kateri(o_toks, c_toks) or is_ki_kateri(c_toks, o_toks):
         return "V-PRON"
     # A phrase replaced by a single pronoun, or the reverse: [te vere pa ->
-    # katere], [kateremu -> ki mu]. A bound form against preposition +
-    # pronoun is a pronoun form, not a reference change: [za njih -> zanj]
+    # katere], [kateremu -> ki mu].
     for a, b in ((o_toks, c_toks), (c_toks, o_toks)):
         if is_ref(a, b):
             if "Bound" in a[0].morph.get("Variant") and \
@@ -333,6 +312,15 @@ def only_orth_change(o_toks, c_toks):
     if o_join == c_join:
         return True
     return False
+
+# Input 1: Spacy orig tokens
+# Input 2: Spacy cor tokens
+# Output: Boolean; orig and cor are the same apart from spacing, case,
+# hyphens, dashes and apostrophes
+def only_hyphen_change(o_toks, c_toks):
+    o_join = sub("['\\-–—]", "", "".join([o.lower_ for o in o_toks]))
+    c_join = sub("['\\-–—]", "", "".join([c.lower_ for c in c_toks]))
+    return o_join == c_join
 
 # Input 1: Spacy orig tokens
 # Input 2: Spacy cor tokens

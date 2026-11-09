@@ -1,6 +1,4 @@
-"""Slovene grouper (developed in experiments/grouper, see NOTES.md there).
-
-Runs after the classifier and adds a second label level: edits that belong to
+"""Slovene grouper. Runs after the classifier and adds a second label level: edits that belong to
 one morphological change form a group with one group label M-<FEAT>. Single
 morphology edits are groups of one. The classifier's word-level labels
 (edit.type) are never changed.
@@ -10,9 +8,10 @@ Each edit in a group gets:
     edit.group_label  M-<FEAT>
     edit.group_op     the operation of the whole group: all members M -> M,
                       all members U -> U, anything else -> R
-Edits outside morphology groups keep None in all three. Edit.to_m2() writes
-the group into the M2 comment field as G<n>=<group op>:<group label>.
+Edits outside morphology groups keep None in all three. 
 """
+from pathlib import Path
+from errant.sl.classifier import same_lemma
 
 # Tagger feature -> group type
 FEAT_TYPES = [("Case", "CASE"), ("Number", "NUM"), ("Number[psor]", "NUM"),
@@ -41,27 +40,20 @@ VERBS = {"VERB", "AUX"}
 NP_MODS = {"amod", "det", "nummod"}
 # Agreement features a bridge edit can pass on, and their group types
 BRIDGE_FEATS = {"Case": "CASE", "Number": "NUM", "Gender": "GEND", "Person": "PRS"}
-# Case/Number readings of the long and short personal pronoun forms
-# (reflexive: no number); bound forms (zanj, vame) take the tagger's
-_GA, _DL = ("Gen", "Acc"), ("Dat", "Loc")
-def _r(num, *cases): return {f"{c}/{num}" for c in cases}
-PRON_READINGS = {
-    "mene": _r("Sing", *_GA), "me": _r("Sing", *_GA), "meni": _r("Sing", *_DL),
-    "mi": _r("Sing", "Dat") | _r("Plur", "Nom"), "mano": _r("Sing", "Ins"), "menoj": _r("Sing", "Ins"),
-    "tebe": _r("Sing", *_GA), "te": _r("Sing", *_GA), "tebi": _r("Sing", *_DL),
-    "ti": _r("Sing", "Dat", "Nom"), "tabo": _r("Sing", "Ins"), "teboj": _r("Sing", "Ins"),
-    "sebe": _r("-", *_GA), "se": _r("-", "Acc"), "sebi": _r("-", *_DL), "si": _r("-", "Dat"),
-    "sabo": _r("-", "Ins"), "seboj": _r("-", "Ins"),
-    "njega": _r("Sing", *_GA), "ga": _r("Sing", *_GA), "njemu": _r("Sing", "Dat"),
-    "mu": _r("Sing", "Dat"), "njem": _r("Sing", "Loc"), "njim": _r("Sing", "Ins") | _r("Plur", "Dat"),
-    "nje": _r("Sing", "Gen") | _r("Plur", "Acc"), "je": _r("Sing", "Gen"),
-    "njo": _r("Sing", "Acc", "Ins"), "jo": _r("Sing", "Acc"), "njej": _r("Sing", *_DL),
-    "nji": _r("Sing", *_DL), "ji": _r("Sing", "Dat"),
-    "njiju": _r("Dual", *_GA, "Loc"), "ju": _r("Dual", *_GA), "njima": _r("Dual", "Dat", "Ins"),
-    "jima": _r("Dual", "Dat"),
-    "njih": _r("Plur", *_GA, "Loc"), "jih": _r("Plur", *_GA), "jim": _r("Plur", "Dat"),
-    "njimi": _r("Plur", "Ins"),
-}
+# Input: A path to a tab-separated readings file (# lines are comments)
+# Output: {form: set of Case/Number readings}
+def load_readings(path):
+    readings = {}
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("#") or not line.strip(): continue
+            form, rs = line.rstrip("\n").split("\t")
+            readings[form] = set(rs.split())
+    return readings
+
+# Case/Number readings of the long, short and bound personal pronoun forms
+# from Sloleks (reflexive: no number); forms not listed take the tagger's
+PRON_READINGS = load_readings(Path(__file__).resolve().parent/"resources"/"pron_readings.tsv")
 # Heads that can link their agreeing dependents when they don't change
 # themselves (syncretism): [svojem strokovnem štabu -> svojemu strokovnemu štabu]
 NOMINAL = {"NOUN", "PROPN", "ADJ", "PRON", "DET", "NUM"}
@@ -69,10 +61,7 @@ NOMINAL = {"NOUN", "PROPN", "ADJ", "PRON", "DET", "NUM"}
 # Input: A spacy token
 # Output: {feature: value} from the tagger
 def feats(tok):
-    return {k: v for k, v in (f.split("=", 1) for f in str(tok.morph).split("|") if "=" in f)}
-
-def same_lemma(a, b):
-    return a.lemma_.lower() == b.lemma_.lower()
+    return tok.morph.to_dict()
 
 # Input 1: orig tokens of an edit
 # Input 2: cor tokens of an edit
@@ -217,8 +206,8 @@ def edit_types(edit, edits, orig, cor):
         t = one_sided_type(tok, orig if edit.o_toks else cor)
         if t:
             return {t}
-        # Other one-sided morphology edits (auxiliaries)
-        return {"MORPH"} if is_morph(edit) else set()
+        # Other one-sided auxiliaries (not the copula)
+        return {"MORPH"} if tok.dep_.split(":")[0] == "aux" else set()
     if not is_morph(edit) or not edit.o_toks or not edit.c_toks:
         return set()
     types = set()

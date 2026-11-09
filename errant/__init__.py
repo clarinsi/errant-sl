@@ -27,8 +27,8 @@ def load(lang, nlp=None, model=None):
 
     # Load language edit classifier
     classifier = import_module(f"errant.{lang}.classifier")
-    # The classifier needs spacy
-    classifier.nlp = nlp
+    # The English classifier needs spacy
+    if lang == "en": classifier.nlp = nlp
 
     # Load language edit grouper, if the language has one
     try:

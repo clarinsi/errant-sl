@@ -25,7 +25,7 @@ def get_rule_edits(alignment):
             # Turn the processed sequence into edits
             for seq in processed: 
                 edits.append(Edit(alignment.orig, alignment.cor, seq[1:]))
-    return merge_rewritten_clauses(edits, alignment)
+    return merge_moves(merge_rewritten_clauses(edits, alignment), alignment)
 
 # Input 1: A sequence of adjacent D, I and/or S alignments
 # Input 2: An Alignment object
@@ -178,9 +178,52 @@ def merge_rewritten_clauses(edits, alignment):
         return any(a <= e.o_start and e.o_end <= b and c <= e.c_start and e.c_end <= d
             for a, b, c, d in merged)
     out = [e for e in edits if not inside(e)]
-    # The classifier keeps the preset type (one rewritten clause = S-REWRITE)
-    out += [Edit(alignment.orig, alignment.cor, span, "S-REWRITE") for span in merged]
+    out += [Edit(alignment.orig, alignment.cor, span) for span in merged]
     return sorted(out, key=lambda e: (e.o_start, e.o_end, e.c_start))
+
+# Input 1: A list of Edit objects
+# Input 2: An Alignment object
+# Output: The edits, with each moved word / phrase as one edit
+# Closest pairs first; each edit is used once.
+def merge_moves(edits, alignment):
+    words = lambda toks: [tok.lower_ for tok in toks]
+    while True:
+        pairs = []
+        for d in edits:
+            if not d.o_toks or d.c_toks or all(is_punct(tok) for tok in d.o_toks): continue
+            for i in edits:
+                if i.o_toks or not i.c_toks or words(d.o_toks) != words(i.c_toks): continue
+                span = [min(d.o_start, i.o_start), max(d.o_end, i.o_end),
+                    min(d.c_start, i.c_start), max(d.c_end, i.c_end)]
+                # Nothing else may change inside the span: no other edit
+                # inside it, and both sides are the same words reordered
+                o = alignment.orig[span[0]:span[1]]
+                c = alignment.cor[span[2]:span[3]]
+                if sorted(words(o)) != sorted(words(c)): continue
+                # (a reordering inside, e.g. a 2-word swap, is part of the move)
+                if any(inside(e, span) and not is_swap(e)
+                        for e in edits if e is not d and e is not i): continue
+                pairs.append((span[1]-span[0], d, i, span))
+        if not pairs: return edits
+        _, d, i, span = min(pairs, key=lambda p: (p[0], p[3]))
+        edits = [e for e in edits if e is not d and e is not i and not inside(e, span)] + \
+            [Edit(alignment.orig, alignment.cor, span)]
+        edits.sort(key=lambda e: (e.o_start, e.o_end, e.c_start))
+
+# Input: An Edit object
+# Output: True if the edit only reorders 2+ words (a 1:1 case change is not)
+def is_swap(edit):
+    o = sorted(tok.lower_ for tok in edit.o_toks)
+    return len(o) > 1 and o == sorted(tok.lower_ for tok in edit.c_toks)
+
+# Input 1: An Edit object
+# Input 2: An orig / cor span [o_start, o_end, c_start, c_end]
+# Output: True if the edit changes something inside the span (an insertion
+# counts if it is strictly inside)
+def inside(edit, span):
+    if edit.o_start == edit.o_end:
+        return span[0] < edit.o_start < span[1]
+    return edit.o_start < span[1] and edit.o_end > span[0]
 
 # Input 1: Tokens on one side of a span
 # Input 2: Tokens on the other side

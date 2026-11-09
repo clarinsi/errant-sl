@@ -1,4 +1,5 @@
 import argparse
+import sys
 from collections import Counter
 
 def main():
@@ -15,7 +16,11 @@ def main():
     best_cats = {}
     # Process each sentence
     sents = zip(hyp_m2, ref_m2)
+    # Count sentences whose original text (S line) differs, i.e. hyp and ref
+    # were tokenised differently and their edit offsets don't line up
+    mismatch = 0
     for sent_id, sent in enumerate(sents):
+        if sent[0].split("\n")[0] != sent[1].split("\n")[0]: mismatch += 1
         # Simplify the edits into lists of lists
         hyp_edits = simplify_edits(sent[0])
         ref_edits = simplify_edits(sent[1])
@@ -30,6 +35,10 @@ def main():
         # Merge these dicts with best_dict and best_cats
         best_dict += Counter(count_dict)
         best_cats = merge_dict(best_cats, cat_dict)
+    if mismatch:
+        print(f"Warning: {mismatch} sentences have different S lines in -hyp and "
+            "-ref (different tokeniser / parser?); their edits are compared on "
+            "mismatched offsets.", file=sys.stderr)
     # Print results
     print_results(best_dict, best_cats, args)
 
