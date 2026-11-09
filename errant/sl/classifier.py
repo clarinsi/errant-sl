@@ -10,7 +10,8 @@ def load_word_list(path):
     with open(path, encoding="utf-8") as f:
         return set(line.rstrip("\n") for line in f)
 
-# Sloleks 3.1 wordforms (non-standard-tagged entries excluded at build time)
+# Sloleks 3.1 wordforms of MANUAL entries (AUTOMATIC entries and non-standard
+# spellings excluded at build time; experiments/slolex meta/build_sloleks_wordlist.py)
 sloleks = load_word_list(base_dir/"resources"/"sloleks_wordforms.txt")
 
 # Input: A token string
@@ -43,6 +44,8 @@ LEMMA_SIM_THRESHOLD = 0.8
 # length (allowed = max(1, len // TEXT_EDIT_SCALE)), so short words aren't
 # held to the same absolute distance as long ones
 TEXT_EDIT_SCALE = 3
+# Longest inflectional ending considered by same_stem()
+ENDING_LEN = 4
 
 # Input 1: A resolved POS string
 # Input 2: The level prefix: S (one-sided), M or V
@@ -60,6 +63,15 @@ def close_text(a, b):
         return True
     allowed = max(1, max(len(a), len(b)) // TEXT_EDIT_SCALE)
     return Levenshtein.distance(a, b) <= allowed
+
+# Input 1: A string
+# Input 2: A string
+# Output: Boolean; the two differ only in their last ENDING_LEN characters
+# (an inflectional ending), not inside the stem
+def same_stem(a, b):
+    n = 0
+    while n < min(len(a), len(b)) and a[n] == b[n]: n += 1
+    return n >= min(len(a), len(b)) - ENDING_LEN
 
 # Input 1: Spacy orig token
 # Input 2: Spacy cor token
@@ -239,6 +251,13 @@ def get_two_sided_type(o_toks, c_toks):
 
         # neither in Sloleks -> fall through to the GENERAL/STRING
         # SIMILARITY fallback below
+
+        # Neither in Sloleks (names, foreign / rare words): same POS, a close
+        # lemma and only the ending differs -> morphology [Matanza -> Matanzi];
+        # a change inside the stem is spelling [asimulantu -> asimilantu]
+        if o_pos[0] == c_pos[0] and close_lemma(o_toks[0], c_toks[0]) and \
+                same_stem(o_toks[0].lower_, c_toks[0].lower_):
+            return label_pos(o_pos[0], "M")
 
         # 4. GENERAL
         # Auxiliaries with different lemmas
