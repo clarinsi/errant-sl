@@ -1,6 +1,6 @@
 [project]
 name = "sloerrant"
-version = "0.1.0"
+version = "1.0.0"
 description = "SloERRANT: a Slovenian adaptation of the ERRor ANnotation Toolkit (ERRANT). Automatically extract and classify grammatical errors in parallel Slovenian sentences."
 readme = "README.md"
 license = "MIT"

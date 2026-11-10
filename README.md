@@ -16,7 +16,7 @@ A 4 5|||R:M-NOUN|||odnosu|||REQUIRED|||G0=R:M-GOV|||0
 ## Differences from ERRANT
 
 **Changes to the error taxonomy**
-- Labels are **level-first** (O (orthography) / M (morphology) / V (vocabulary)/ S (syntax)).
+- Labels are **level-first** (O (orthography) / M (morphology) / V (vocabulary) / S (syntax)).
 
 **Slovene merger** (`errant/sl/merger.py`)
 - The English merge rules are removed. Edits stay word-level, so the grouper can link them.
@@ -28,7 +28,7 @@ A 4 5|||R:M-NOUN|||odnosu|||REQUIRED|||G0=R:M-GOV|||0
 - A moved word or phrase becomes one `S-WO` edit.
 
 **Slovene classifier** (`errant/sl/classifier.py`)
-- Labels are `<operation>:<level>-<POS>`. As in ERRANT, the operation is `M` (missing), `U` (unnecessary) or `R` (replacement). The level is O, M, V or S. One-word replacements are decided from the tagger's lemmas and POS and the written forms, without a lexicon. See error types below for detailed labels.
+- Labels are `<operation>:<level>-<POS>`. As in ERRANT, the operation is `M` (missing), `U` (unnecessary) or `R` (replacement). The level is O, M, V or S. One-word replacements are decided from the tagger's lemmas and POS and the written forms, without a lexicon. See [Error Categories](#error-categories) for the detailed labels.
 
 
 **Optional grouper** (`errant/sl/grouper.py`)
@@ -41,11 +41,10 @@ A 4 5|||R:M-NOUN|||odnosu|||REQUIRED|||G0=R:M-GOV|||0
 - **Pre-tagged CoNLL-U input** (`-format conllu`), so you can use CLASSLA, Trankit, UDPipe or any other tagger instead of spaCy.
 - A table of the case/number readings of all personal and reflexive pronoun forms (long, short and bound: *njega, ga, zanj*), written from the Slovene pronoun paradigm. The grouper uses it for `M-PFORM`.
 
-- **Scoring** (`errant_compare`) adds:
-  - `-cat 4`: scores by level (O, M, V, S)
-  - `-group`: scores morphology groups as single units
-  
-  Without these flags, the output is identical to upstream.
+**Scoring** (`errant_compare`)
+- `-cat 4`: scores by level (O, M, V, S)
+- `-group`: scores morphology groups as single units
+- Without these flags, the output is identical to upstream.
 
 ## Installation
 
@@ -59,7 +58,9 @@ pip install "sloerrant[sl] @ git+https://github.com/zivastebljaj/errant-sl.git"
 
 The `[sl]` extra installs `sl_core_news_sm` automatically, so you don't need a separate `spacy download` step. With [uv](https://docs.astral.sh/uv/), the same command runs faster: `uv pip install "sloerrant[sl] @ git+…"`.
 
-**Recommended: the transformer model.** Lemmas decide between morphology (M) and vocabulary (V), and the small model's lemmas are much worse (see the examples below). To install the transformer model as well:
+To install a specific release instead of the latest code, add the tag to the URL: `pip install "sloerrant[sl] @ git+https://github.com/zivastebljaj/errant-sl.git@v1.0.0"`.
+
+**Recommended: the transformer model.** Lemmas decide between morphology (M) and vocabulary (V), and the small model's lemmas are worse. To install the transformer model as well:
 
 ```
 pip install "sloerrant[sl,trf] @ git+https://github.com/zivastebljaj/errant-sl.git"
@@ -224,13 +225,13 @@ There is no SloERRANT publication yet. Please cite the software for now:
 
 ```bibtex
 @software{stebljaj2026sloerrant,
-  author = {Stebljaj, Živa},
-  title  = {{SloERRANT}: A Slovenian Adaptation of the ERRor ANnotation Toolkit},
-  year   = {2026},
-  url    = {https://github.com/zivastebljaj/errant-sl}
+  author  = {Štebljaj, Živa},
+  title   = {{SloERRANT}: A Slovenian Adaptation of the ERRor ANnotation Toolkit},
+  year    = {2026},
+  version = {1.0.0},
+  url     = {https://github.com/zivastebljaj/errant-sl}
 }
 ```
-<!-- TODO: replace with the SloERRANT paper once published -->
 
 Please also cite the original ERRANT papers:
 
