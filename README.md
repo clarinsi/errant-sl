@@ -1,4 +1,4 @@
-# SloERRANT
+# SloERRANT (v1.0.0)
 
 SloERRANT is a Slovenian adaptation of ERRANT (ERRor ANnotation Toolkit). It automatically extracts and classifies grammatical errors in Slovenian text.
 
@@ -28,25 +28,8 @@ A 4 5|||R:M-NOUN|||odnosu|||REQUIRED|||G0=R:M-GOV|||0
 - A moved word or phrase becomes one `S-WO` edit.
 
 **Slovene classifier** (`errant/sl/classifier.py`)
-- Labels are `<operation>:<level>-<POS>`. As in ERRANT, the operation is `M` (missing), `U` (unnecessary) or `R` (replacement). The level is O, M, V or S. One-word replacements are decided from the tagger's lemmas and POS and the written forms, without a lexicon.
-- **O (orthography)**
-  - `O-SPELL`: a misspelling (*zeleli → želeli*, *srečau → srečal*, *z sestro → s sestro*)
-  - `O-PUNCT`: punctuation
-  - `O-CAP`: capitalisation
-  - `O-MERGE`, `O-SPLIT`: spacing (*za njo → zanjo*)
-- **M (morphology):** the same word in another form
-  - `M-<POS>`: only the ending differs (*svojem → svojemu*)
-  - bare `M`: the same lemma with a different POS
-- **V (vocabulary):** a different word
-  - `V-<POS>`: e.g. *iz → z*, *napravila → pripravila*, *ki → kateri*
-  - bare `V`: the two words have a different POS
-- **S (syntax)**
-  - `S-<POS>`: a missing or unnecessary word
-  - `S-WO`: word order
-  - `S-REWRITE`: a rewritten phrase or clause
-  - `S-REF`: a phrase ↔ a pronoun (*te vere pa → katere*)
-  - `S-CONJ`: punctuation ↔ a conjunction
-- `UNK`: detected but not corrected. `OTHER`: not covered by the rules.
+- Labels are `<operation>:<level>-<POS>`. As in ERRANT, the operation is `M` (missing), `U` (unnecessary) or `R` (replacement). The level is O, M, V or S. One-word replacements are decided from the tagger's lemmas and POS and the written forms, without a lexicon. See error types below for detailed labels.
+
 
 **Optional grouper** (`errant/sl/grouper.py`)
 - A new stage after the classifier. It links the edits of one morphological change into a group. Links come from agreement, from an auxiliary to its verb, and from a preposition to the case it governs.
@@ -202,16 +185,6 @@ S Gre dvakrat vsak teden na trening .
 A 1 4|||R:S-WO|||vsak teden dvakrat|||REQUIRED|||-NONE-|||0
 ```
 
-These are the examples of:
-1. A misspelling.
-2. A case error spread over two agreeing words, which form one `M-CASE` group.
-3. A wrong preposition together with the case it governs, labelled `M-GOV`.
-4. A missing conditional *bi* and the verb form it requires, labelled `M-MOOD`.
-5. The *s/z* preposition confusion.
-6. A word order change.
-
-With the default `sl_core_news_sm`, sentences 2 and 4 come out worse. *dobremu* and *delala* are labelled `R:O-SPELL`, so neither joins its group, because the small model gives them the wrong lemmas.
-
 ## Error Categories
 
 Each edit has a **word label** `<operation>:<label>`. As in ERRANT, the operation is `M` (missing), `U` (unnecessary) or `R` (replacement). Unlike ERRANT, the label starts with a **level**:
@@ -238,13 +211,6 @@ Each edit has a **word label** `<operation>:<label>`. As in ERRANT, the operatio
 | `M-PFORM` | long / short / bound pronoun form (*njemu → mu*, *za njega → zanj*) |
 | `M-REFL` | reflexive *se* ↔ *si* |
 | `M-MORPH` | other morphological change |
-
-When several features change, the label follows this priority: `SFORM > MOOD > VFORM > TENSE > ASP > REFL > DEG > DEF > GOV > PFORM > CASE > PRS > NUM > GEND > MORPH`. Every morphology edit belongs to a group, even if it is a group of one. Prepositions, *se/si*, *bolj/najbolj* and auxiliaries can also join a group.
-
-**Differences from English ERRANT**
-- English ERRANT types are POS-first (`VERB:SVA`, `NOUN:NUM`, `VERB:TENSE`). SloERRANT puts the level first and keeps word labels coarse. The *kind* of morphological error, such as agreement, case or tense, moves to the group level, where it can cover several words.
-- There are no `SVA`, `NOUN:INFL`, `VERB:FORM`, `ORTH` or `CONTR` types. Their roles are taken by group labels, `O-CAP` / `O-MERGE` / `O-SPLIT` and `O-SPELL`.
-- New types: `S-REWRITE`, `S-REF`, `S-CONJ`, `S-WO` for moves over any distance, and bare `M` / `V`.
 
 **Known limitations**
 - Group types and the choice between M and V depend on how the tagger reads *incorrect* word forms. Use a good tagger.
