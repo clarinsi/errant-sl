@@ -1,12 +1,12 @@
 [project]
 name = "sloerrant"
-version = "1.0.0"
+version = "1.0"
 description = "SloERRANT: a Slovenian adaptation of the ERRor ANnotation Toolkit (ERRANT). Automatically extract and classify grammatical errors in parallel Slovenian sentences."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE.md"]
 authors = [
-    { name = "Živa Stebljaj" },
+    { name = "Živa Štebljaj" },
     { name = "Christopher Bryant", email = "christopher.bryant@cl.cam.ac.uk" },
     { name = "Mariano Felice" },
 ]

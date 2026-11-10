@@ -3,7 +3,7 @@ import spacy
 from errant.annotator import Annotator
 
 # SloERRANT version
-__version__ = '1.0.0'
+__version__ = '1.0'
 
 # spacy model family per language; used to build the default model name
 _model_family = {"en": "core_web", "sl": "core_news"}

@@ -1,4 +1,4 @@
-# SloERRANT (v1.0.0)
+# SloERRANT (v1.0)
 
 SloERRANT is a Slovenian adaptation of ERRANT (ERRor ANnotation Toolkit). It automatically extracts and classifies grammatical errors in Slovenian text.
 
@@ -58,7 +58,7 @@ pip install "sloerrant[sl] @ git+https://github.com/zivastebljaj/errant-sl.git"
 
 The `[sl]` extra installs `sl_core_news_sm` automatically, so you don't need a separate `spacy download` step. With [uv](https://docs.astral.sh/uv/), the same command runs faster: `uv pip install "sloerrant[sl] @ git+…"`.
 
-To install a specific release instead of the latest code, add the tag to the URL: `pip install "sloerrant[sl] @ git+https://github.com/zivastebljaj/errant-sl.git@v1.0.0"`.
+To install a specific release instead of the latest code, add the tag to the URL: `pip install "sloerrant[sl] @ git+https://github.com/zivastebljaj/errant-sl.git@v1.0"`.
 
 **Recommended: the transformer model.** Lemmas decide between morphology (M) and vocabulary (V), and the small model's lemmas are worse. To install the transformer model as well:
 
@@ -228,7 +228,7 @@ There is no SloERRANT publication yet. Please cite the software for now:
   author  = {Štebljaj, Živa},
   title   = {{SloERRANT}: A Slovenian Adaptation of the ERRor ANnotation Toolkit},
   year    = {2026},
-  version = {1.0.0},
+  version = {1.0},
   url     = {https://github.com/zivastebljaj/errant-sl}
 }
 ```
