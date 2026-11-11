@@ -53,17 +53,17 @@ You need Python ≥ 3.9. Install SloERRANT and the Slovenian spaCy model with a 
 ```
 python3 -m venv sloerrant_env
 source sloerrant_env/bin/activate
-pip install "sloerrant[sl] @ git+https://github.com/zivastebljaj/errant-sl.git"
+pip install "sloerrant[sl] @ git+https://github.com/clarinsi/errant-sl.git"
 ```
 
 The `[sl]` extra installs `sl_core_news_sm` automatically, so you don't need a separate `spacy download` step. With [uv](https://docs.astral.sh/uv/), the same command runs faster: `uv pip install "sloerrant[sl] @ git+…"`.
 
-To install a specific release instead of the latest code, add the tag to the URL: `pip install "sloerrant[sl] @ git+https://github.com/zivastebljaj/errant-sl.git@v1.0"`.
+To install a specific release instead of the latest code, add the tag to the URL: `pip install "sloerrant[sl] @ git+https://github.com/clarinsi/errant-sl.git@v1.0"`.
 
 **Recommended: the transformer model.** Lemmas decide between morphology (M) and vocabulary (V), and the small model's lemmas are worse. To install the transformer model as well:
 
 ```
-pip install "sloerrant[sl,trf] @ git+https://github.com/zivastebljaj/errant-sl.git"
+pip install "sloerrant[sl,trf] @ git+https://github.com/clarinsi/errant-sl.git"
 ```
 
 This pulls in PyTorch, which is a large download. If you already tag your data with another parser, skip the model and use CoNLL-U input instead.
@@ -71,7 +71,7 @@ This pulls in PyTorch, which is a large download. If you already tag your data w
 **From source** (for development):
 
 ```
-git clone https://github.com/zivastebljaj/errant-sl.git
+git clone https://github.com/clarinsi/errant-sl.git
 cd errant-sl
 uv sync --extra sl          # or: pip install -e ".[sl]"
 ```
@@ -229,7 +229,7 @@ There is no SloERRANT publication yet. Please cite the software for now:
   title   = {{SloERRANT}: A Slovenian Adaptation of the ERRor ANnotation Toolkit},
   year    = {2026},
   version = {1.0},
-  url     = {https://github.com/zivastebljaj/errant-sl}
+  url     = {https://github.com/clarinsi/errant-sl}
 }
 ```
 
@@ -270,6 +270,4 @@ The Slovenian pipelines are [spaCy](https://spacy.io/models/sl)'s `sl_core_news`
 
 MIT License. See [LICENSE.md](LICENSE.md). The original copyright of Christopher Bryant and Mariano Felice is retained.
 
-SloERRANT doesn't ship any third-party data. The spaCy models are installed as dependencies under their own licenses.
 
-Bug reports and suggestions: [GitHub issues](https://github.com/zivastebljaj/errant-sl/issues).

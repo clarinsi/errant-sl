@@ -22,7 +22,7 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project.urls]
-Homepage = "https://github.com/zivastebljaj/errant-sl"
+Homepage = "https://github.com/clarinsi/errant-sl"
 Upstream = "https://github.com/chrisjbryant/errant"
 
 [project.scripts]
